@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Sampler Avançado</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1c1c1c;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .sampler-panel {
+            background-color: #333;
+            border: 5px solid #555;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 600px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+
+        .knob-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .knob-wrapper {
+            width: 60px;
+            height: 60px;
+            background-color: #222;
+            border-radius: 50%;
+            border: 2px solid #555;
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.5) inset;
+            margin-bottom: 5px;
+        }
+
+        .knob-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg); /* Posição inicial (centro) */
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: #00ff99;
+            box-shadow: 0 0 5px #00ff99;
+        }
+
+        .knob-label {
+            font-size: 0.8em;
+            color: #ccc;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-left: 20px;
+        }
+        
+        /* Estilos dos Botões de Ação */
+        .action-button {
+            width: 80px;
+            height: 35px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+
+        #saveButton {
+            background-color: #007bff;
+            color: white;
+        }
+
+        #saveButton:hover {
+            background-color: #0056b3;
+        }
+
+        #fileInput {
+            margin-top: 10px;
+            color: #00ff99;
+        }
+        
+        /* Estilos do LED */
+        .led-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-left: 20px;
+        }
+
+        .led {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: #550000;
+            border: 1px solid #777;
+            box-shadow: 0 0 5px #000 inset;
+            transition: background-color 0.1s;
+        }
+        
+        .led-on {
+            background-color: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+        
+        /* Estilos do Botão de Inversão */
+        .rev-button {
+            width: 80px;
+            height: 35px;
+            margin: 5px 0;
+            border: 2px solid #00ff99;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #222;
+            color: #00ff99;
+            transition: background-color 0.1s, color 0.1s, box-shadow 0.1s;
+        }
+        
+        .rev-button.active {
+            background-color: #00ff99;
+            color: #1c1c1c;
+            box-shadow: 0 0 8px #00ff99;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="sampler-panel">
+        <h2>WEBSAMPLER 1.0</h2>
+
+        <input type="file" id="fileInput" accept="audio/*">
+        
+        <div class="controls">
+            <div class="knob-group">
+                <div class="knob-wrapper" id="sr-sampler-knob" data-value="1.0">
+                    <div class="knob-indicator"></div>
+                </div>
+                <div class="knob-label">SR.SAMPLER (1.0)</div>
+            </div>
+
+            <div class="knob-group">
+                <div class="knob-wrapper" id="vel-sampler-knob" data-value="1.0">
+                    <div class="knob-indicator"></div>
+                </div>
+                <div class="knob-label">VEL.SAMPLER (1.0)</div>
+            </div>
+
+            <div class="knob-group">
+                <div class="knob-wrapper" id="trim-start-knob" data-value="0.0">
+                    <div class="knob-indicator"></div>
+                </div>
+                <div class="knob-label">TRIM.S (0.00)</div>
+            </div>
+
+            <div class="knob-group">
+                <div class="knob-wrapper" id="trim-end-knob" data-value="1.0">
+                    <div class="knob-indicator"></div>
+                </div>
+                <div class="knob-label">TRIM.E (1.00)</div>
+            </div>
+
+            <div class="button-group">
+                <button class="rev-button" id="revButton">REV</button>
+                <button class="action-button" id="saveButton">SALVAR</button>
+            </div>
+        </div>
+        
+        <p id="status-message">Aguardando arquivo...</p>
+
+    </div>
+
+    <script>
+        // Variáveis Globais
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let audioBuffer = null;
+        let sourceNode = null;
+
+        // Elementos do DOM
+        const fileInput = document.getElementById('fileInput');
+        const srSamplerKnobWrapper = document.getElementById('sr-sampler-knob');
+        const velSamplerKnobWrapper = document.getElementById('vel-sampler-knob');
+        const trimStartKnobWrapper = document.getElementById('trim-start-knob');
+        const trimEndKnobWrapper = document.getElementById('trim-end-knob');
+        const saveButton = document.getElementById('saveButton');
+        const revButton = document.getElementById('revButton');
+        const statusMessage = document.getElementById('status-message');
+
+        // Estado do Sampler
+        const samplerState = {
+            isReversed: false // Novo estado para o botão REV
+        };
+
+        // --- FUNÇÕES DE UTENSÍLIOS ---
+
+        /**
+         * Lida com a movimentação do knob (botão giratório).
+         * @param {HTMLElement} knobElement - O elemento HTML do knob.
+         * @param {number} minVal - Valor mínimo que o knob pode atingir.
+         * @param {number} maxVal - Valor máximo que o knob pode atingir.
+         * @param {number} initialVal - Valor inicial do knob.
+         * @param {number} sensitivity - Quão rapidamente o valor muda com o movimento do mouse.
+         * @param {function} callback - Função a ser chamada após a mudança de valor.
+         */
+        function makeKnobDraggable(knobElement, minVal, maxVal, initialVal, sensitivity, callback) {
+            let isDragging = false;
+            let startY = 0;
+            let initialValue = initialVal;
+
+            // Define o valor inicial no dataset e atualiza a rotação visual
+            knobElement.dataset.value = initialVal;
+            updateKnobVisual(knobElement, initialVal, minVal, maxVal);
+
+            knobElement.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startY = e.clientY;
+                initialValue = parseFloat(knobElement.dataset.value);
+                knobElement.style.cursor = 'ns-resize';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                const deltaY = startY - e.clientY;
+                let newValue = initialValue + deltaY * sensitivity;
+
+                // Clamp (limitador) do valor
+                newValue = Math.max(minVal, Math.min(maxVal, newValue));
+
+                knobElement.dataset.value = newValue;
+                updateKnobVisual(knobElement, newValue, minVal, maxVal);
+
+                if (callback) {
+                    callback(newValue);
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    knobElement.style.cursor = 'pointer';
+                }
+            });
+        }
+
+        /**
+         * Atualiza a rotação visual do knob com base no seu valor.
+         */
+        function updateKnobVisual(knobElement, value, min, max) {
+            // Normaliza o valor para uma faixa de 0 a 1
+            const normalized = (value - min) / (max - min);
+            
+            // Mapeia para uma rotação em graus (ex: -135deg para min, +135deg para max)
+            const rotation = normalized * 270 - 135; 
+            
+            knobElement.querySelector('.knob-indicator').style.transform = 
+                `translate(-50%, -50%) rotate(${rotation}deg)`;
+            
+            // Atualiza o rótulo
+            const labelElement = knobElement.nextElementSibling;
+            if (labelElement) {
+                const labelText = labelElement.textContent.split(' ')[0];
+                labelElement.textContent = `${labelText} (${value.toFixed(knobElement.id.includes('trim') ? 2 : 1)})`;
+            }
+        }
+
+        // --- INICIALIZAÇÃO DOS KNOBS ---
+
+        // Knob SR.SAMPLER (Downsampling: 0.1 a 1.0)
+        makeKnobDraggable(srSamplerKnobWrapper, 0.1, 1.0, 1.0, 0.005, (val) => {
+            // A taxa de reprodução não é alterada em tempo real com o downsampling
+        });
+
+        // Knob VEL.SAMPLER (Velocidade/Pitch: 0.25 a 4.0)
+        makeKnobDraggable(velSamplerKnobWrapper, 0.25, 4.0, 1.0, 0.02, (val) => {
+            if (sourceNode) {
+                sourceNode.playbackRate.value = val;
+            }
+        });
+
+        // Knob TRIM.S (Trim Start: 0.0 a 1.0)
+        makeKnobDraggable(trimStartKnobWrapper, 0.0, 1.0, 0.0, 0.005, (val) => {
+            // Nenhuma ação em tempo real, afeta apenas o salvamento
+        });
+
+        // Knob TRIM.E (Trim End: 0.0 a 1.0)
+        makeKnobDraggable(trimEndKnobWrapper, 0.0, 1.0, 1.0, 0.005, (val) => {
+            // Nenhuma ação em tempo real, afeta apenas o salvamento
+        });
+
+
+        // --- FUNÇÕES DE EVENTOS ---
+
+        // Evento de seleção de arquivo
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            statusMessage.textContent = 'Carregando e decodificando áudio...';
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                statusMessage.textContent = `Arquivo carregado! (${(audioBuffer.duration).toFixed(2)}s)`;
+                
+                // Toca o sample logo após o carregamento (versão original, sem efeitos)
+                playSample(1.0); 
+
+            } catch (error) {
+                console.error("Erro ao carregar ou decodificar áudio:", error);
+                statusMessage.textContent = 'Erro ao carregar o áudio.';
+            }
+        });
+
+        // Evento do botão REV
+        revButton.addEventListener('click', () => {
+            samplerState.isReversed = !samplerState.isReversed;
+            revButton.classList.toggle('active', samplerState.isReversed);
+            
+            statusMessage.textContent = `Inversão: ${samplerState.isReversed ? 'Ativa' : 'Desativa'}. Salve para aplicar.`;
+        });
+        
+        // Evento do botão SALVAR
+        saveButton.addEventListener('click', saveSample);
+
+        // --- FUNÇÕES DE PROCESSAMENTO DE ÁUDIO ---
+
+        /**
+         * Toca o sample no Audio Context atual, aplicando apenas a velocidade.
+         * @param {number} rate - O playbackRate a ser aplicado (do VEL.SAMPLER).
+         */
+        function playSample(rate) {
+            if (!audioBuffer) return;
+
+            // Se houver uma reprodução anterior, pare-a
+            if (sourceNode) {
+                sourceNode.stop();
+                sourceNode.disconnect();
+            }
+
+            sourceNode = audioCtx.createBufferSource();
+            sourceNode.buffer = audioBuffer;
+            sourceNode.playbackRate.value = rate; 
+            sourceNode.connect(audioCtx.destination);
+            
+            // O Web Audio API não suporta inversão (reverse) simples de forma nativa
+            // no AudioBufferSourceNode. O botão REV afeta apenas o áudio salvo.
+            
+            sourceNode.start(0);
+        }
+
+
+        /**
+         * Salva o sample como arquivo WAV, aplicando:
+         * 1. Trim (Start/End)
+         * 2. Reverse (Inversão) - NOVO!
+         * 3. Velocity/Pitch Shift (Simulação)
+         * 4. Downsampling (Redução da taxa de amostragem)
+         */
+        function saveSample() {
+            if (!audioBuffer) {
+                statusMessage.textContent = 'Nenhum áudio carregado para salvar.';
+                return;
+            }
+
+            statusMessage.textContent = 'Processando e Salvando...';
+
+            // 1. OBTENÇÃO DOS PARÂMETROS
+            const vel = parseFloat(velSamplerKnobWrapper.dataset.value);
+            const sr = parseFloat(srSamplerKnobWrapper.dataset.value);
+            const trimStart = parseFloat(trimStartKnobWrapper.dataset.value);
+            const trimEnd = parseFloat(trimEndKnobWrapper.dataset.value);
+            const isReversed = samplerState.isReversed; // Estado do botão REV
+
+            const rateOriginal = audioBuffer.sampleRate;
+            const numberOfChannels = audioBuffer.numberOfChannels;
+
+            // 2. APLICAÇÃO DO TRIM (CORTE)
+            const durationOriginal = audioBuffer.duration;
+            const startFrame = Math.floor(trimStart * audioBuffer.length);
+            const endFrame = Math.floor(trimEnd * audioBuffer.length);
+            const frameCountClipped = endFrame - startFrame;
+
+            if (frameCountClipped <= 0) {
+                statusMessage.textContent = 'Erro: Trim End não pode ser menor ou igual a Trim Start.';
+                return;
+            }
+
+            const clippedBuffer = audioCtx.createBuffer(
+                numberOfChannels,
+                frameCountClipped,
+                rateOriginal
+            );
+
+            // Copia os dados do buffer original para o buffer recortado
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+                const originalData = audioBuffer.getChannelData(channel);
+                const clippedData = clippedBuffer.getChannelData(channel);
+                
+                for (let i = 0; i < frameCountClipped; i++) {
+                    clippedData[i] = originalData[startFrame + i];
+                }
+            }
+            
+            // 3. APLICAÇÃO DA INVERSÃO (REVERSE)
+            let pitchAdjustedBuffer = clippedBuffer;
+
+            if (isReversed) {
+                // Inversão é feita no buffer 'clippedBuffer' (que já tem o trim aplicado)
+                const reversedBuffer = audioCtx.createBuffer(
+                    numberOfChannels,
+                    frameCountClipped,
+                    rateOriginal
+                );
+                
+                for (let channel = 0; channel < numberOfChannels; channel++) {
+                    const clippedData = clippedBuffer.getChannelData(channel);
+                    const reversedData = reversedBuffer.getChannelData(channel);
+
+                    // Reverte os dados do array
+                    // Nota: O método .slice() é crucial para criar uma cópia e não modificar o original,
+                    // mas o .getChannelData() retorna uma visualização (view) dos dados, então
+                    // precisamos copiar e depois reverter a cópia.
+                    
+                    const tempArray = Array.from(clippedData); // Copia para um array normal
+                    tempArray.reverse(); // Reverte o array
+                    reversedData.set(tempArray); // Copia os dados invertidos para o novo buffer
+                }
+                
+                pitchAdjustedBuffer = reversedBuffer;
+            }
+
+            // 4. APLICAÇÃO DA VELOCIDADE (PITCH SHIFT)
+            
+            const frameCountOriginal = pitchAdjustedBuffer.length;
+            const finalFrameCount = Math.round(frameCountOriginal / vel);
+            
+            const velAdjustedBuffer = audioCtx.createBuffer(
+                numberOfChannels,
+                finalFrameCount,
+                rateOriginal
+            );
+            
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+                const originalData = pitchAdjustedBuffer.getChannelData(channel);
+                const newData = velAdjustedBuffer.getChannelData(channel);
+                
+                for (let i = 0; i < finalFrameCount; i++) {
+                    const indexInOriginal = i * vel; 
+                    const index1 = Math.floor(indexInOriginal);
+                    const fractionalPart = indexInOriginal - index1;
+                    const index2 = Math.min(index1 + 1, frameCountOriginal - 1);
+
+                    // Interpolação linear simples para suavização
+                    const sample1 = originalData[index1];
+                    const sample2 = originalData[index2];
+                    newData[i] = sample1 + (sample2 - sample1) * fractionalPart;
+                }
+            }
+
+
+            // 5. APLICAÇÃO DO DOWNSAMPLING (Redução da Taxa de Amostragem)
+            
+            const newRate = rateOriginal * sr;
+            const newFrameCount = Math.round(velAdjustedBuffer.length * sr);
+            
+            const downsampledBuffer = audioCtx.createBuffer(
+                numberOfChannels,
+                newFrameCount,
+                newRate
+            );
+            
+            const ratio = 1 / sr; // Razão de amostragem
+            
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+                const originalData = velAdjustedBuffer.getChannelData(channel);
+                const downsampledData = downsampledBuffer.getChannelData(channel);
+
+                for (let i = 0; i < newFrameCount; i++) {
+                    const indexInOriginal = i * ratio;
+                    const index1 = Math.floor(indexInOriginal);
+                    const fractionalPart = indexInOriginal - index1;
+                    const index2 = Math.min(index1 + 1, velAdjustedBuffer.length - 1);
+
+                    // Interpolação para evitar aliasing (ruído na conversão)
+                    const sample1 = originalData[index1];
+                    const sample2 = originalData[index2];
+                    downsampledData[i] = sample1 + (sample2 - sample1) * fractionalPart;
+                }
+            }
+
+
+            // 6. EXPORTAÇÃO (Criação do WAV)
+            
+            const wavData = encodeWAV(downsampledBuffer);
+            const blob = new Blob([wavData], { type: 'audio/wav' });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sample_s${sr.toFixed(1)}_v${vel.toFixed(1)}${isReversed ? '_rev' : ''}.wav`;
+            document.body.appendChild(a);
+            a.click();
+            
+            statusMessage.textContent = 'Arquivo salvo com sucesso!';
+            
+            // Limpeza
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+        }
+
+        /**
+         * FUNÇÃO DE ENCODE WAV (Não alterada, responsável por criar o arquivo binário)
+         */
+        function encodeWAV(audioBuffer) {
+            const numberOfChannels = audioBuffer.numberOfChannels;
+            const sampleRate = audioBuffer.sampleRate;
+            const length = audioBuffer.length;
+            const bytesPerSample = 2; // 16-bit PCM
+
+            const buffer = new ArrayBuffer(44 + length * numberOfChannels * bytesPerSample);
+            const view = new DataView(buffer);
+            const channels = [];
+            for (let i = 0; i < numberOfChannels; i++) {
+                channels.push(audioBuffer.getChannelData(i));
+            }
+
+            // RIFF chunk descriptor
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + length * numberOfChannels * bytesPerSample, true);
+            writeString(view, 8, 'WAVE');
+            
+            // FMT sub-chunk
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); // Sub-chunk size
+            view.setUint16(20, 1, true); // Audio format (1 = PCM)
+            view.setUint16(22, numberOfChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * numberOfChannels * bytesPerSample, true); // Byte rate
+            view.setUint16(32, numberOfChannels * bytesPerSample, true); // Block align
+            view.setUint16(34, bytesPerSample * 8, true); // Bits per sample
+
+            // DATA sub-chunk
+            writeString(view, 36, 'data');
+            view.setUint32(40, length * numberOfChannels * bytesPerSample, true);
+
+            // Write the PCM samples
+            let offset = 44;
+            for (let i = 0; i < length; i++) {
+                for (let channel = 0; channel < numberOfChannels; channel++) {
+                    let sample = channels[channel][i];
+                    // Converte float [-1, 1] para int16 [-32768, 32767]
+                    const int16Sample = Math.max(-1, Math.min(1, sample)) * 0x7FFF;
+                    view.setInt16(offset, int16Sample, true);
+                    offset += bytesPerSample;
+                }
+            }
+
+            return buffer;
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+    </script>
+//O salvamento não inclui a opção de save para Vel.Sampler
+</body>
+</html>
