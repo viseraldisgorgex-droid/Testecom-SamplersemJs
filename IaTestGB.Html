@@ -2,584 +2,623 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Sampler Avançado</title>
+    <title>Por Gabriel Barella (Web Sampler com Gate (Hold to Play)) - CÚBICO</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            /* Cores Largamente Laranja (Cor Principal) */
+            --cor-principal: #ff9900; 
+            --cor-secundaria: #ff3366; 
+            --cor-playhead: #ffff00; 
+            --cor-gate: #ff9900; 
+            --fundo-escuro: #222;
+            --fundo-claro: #333;
+            --cor-knob-borda: #555; 
+            --cor-knob-fundo: #444;
+            --cor-knob-indicador: #fff;
+            --tamanho-knob: 60px;
+            --cor-waveform: #ffbe00; 
+            --cor-sampler-knob: #33ccff; 
+            
+            /* 2. NOVA VARIÁVEL DE FONTE DIGITAL */
+            --fonte-hardware: 'Orbitron', 'Segoe UI', Tahoma, sans-serif;
+        }
+
+        /* OTIMIZAÇÃO BÁSICA PARA MOBILE */
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #1c1c1c;
-            color: #e0e0e0;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             align-items: center;
-            padding: 20px;
+            min-height: 100vh;
+            background-color: var(--fundo-escuro);
+            color: #fff;
+            /* Aplica a fonte fallback para o corpo */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 10px; 
+            overflow-x: hidden; 
         }
 
-        .sampler-panel {
-            background-color: #333;
-            border: 5px solid #555;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            width: 90%;
-            max-width: 600px;
+        .sampler-container {
+            background-color: var(--fundo-claro);
+            padding: 25px;
+            border-radius: 4px; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.9);
+            text-align: center;
+            width: 100%; 
+            max-width: 650px; 
         }
 
-        .controls {
-            display: flex;
-            justify-content: space-around;
+        h1 {
+            color: #999; 
             margin-bottom: 20px;
+            font-size: 1em; 
+            font-weight: 300; 
+            text-shadow: none;
+            letter-spacing: 1px;
+            transition: color 0.3s;
+            /* Usa a nova fonte nos títulos */
+            font-family: var(--fonte-hardware); 
         }
 
-        .knob-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .knob-wrapper {
-            width: 60px;
-            height: 60px;
-            background-color: #222;
-            border-radius: 50%;
-            border: 2px solid #555;
-            position: relative;
-            cursor: pointer;
-            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.5) inset;
-            margin-bottom: 5px;
-        }
-
-        .knob-indicator {
+        .time-overlay {
+            /* ... (Estilos mantidos, pois já usa monospace, que combina) ... */
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg); /* Posição inicial (centro) */
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background-color: #00ff99;
-            box-shadow: 0 0 5px #00ff99;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7); 
+            width: auto; 
+            left: auto;
+            text-align: right; 
+            padding: 5px 10px;
+            border: 1px solid #555; 
+            border-radius: 2px;
+            color: var(--cor-waveform); 
+            text-shadow: 0 0 5px rgba(255, 165, 0, 0.5); 
+            font-family: monospace; /* Fonte digital/cúbica */
+            font-size: 1.1em;
+            z-index: 11; 
+            font-weight: bold;
+        }
+        
+        /* ESTILOS DE BOTÃO DE CARREGAR (LOAD/SAVE) - UNIFORMIZAÇÃO */
+        /* Aplica o estilo tanto ao <label> (para o LOAD) quanto ao <button> (para o SAVE) */
+        .custom-file-upload, label[for="fileInput"] {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 1em;
+            border: 3px solid var(--cor-principal);
+            border-radius: 0; 
+            background-color: var(--fundo-claro); 
+            color: var(--cor-principal);
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            user-select: none; 
+            touch-action: manipulation;
+            
+            /* 3. APLICAÇÃO DA FONTE COM NEGRITO E MAIÚSCULAS */
+            font-family: var(--fonte-hardware);
+            font-weight: 700; /* Negrito */
+            text-transform: uppercase; 
         }
 
-        .knob-label {
+        .custom-file-upload:hover, label[for="fileInput"]:hover {
+            background-color: var(--cor-principal);
+            color: var(--fundo-claro);
+            border-color: var(--cor-principal);
+        }
+
+        /* Estilo para quando o arquivo é carregado/salvo */
+        .custom-file-upload.loaded, label[for="fileInput"].loaded {
+            background-color: var(--cor-principal);
+            color: var(--fundo-claro);
+            border-color: var(--cor-principal);
+        }
+        
+        /* ESTILOS DE LABELS DE KNOBS - UNIFORMIZAÇÃO */
+        .control-group label {
+            color: var(--cor-principal);
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            
+            /* 3. APLICAÇÃO DA FONTE COM NEGRITO E MAIÚSCULAS */
+            font-family: var(--fonte-hardware);
+            font-weight: 700; /* Negrito */
+            text-transform: uppercase;
+        }
+
+        /* Estilo para o Knob de Velocidade (cor diferente, mas mesma fonte) */
+        .control-group label[for="velSamplerKnobWrapper"] {
+            color: var(--cor-sampler-knob);
+        }
+
+        .value-display {
             font-size: 0.8em;
             color: #ccc;
+            margin-top: 5px;
+            /* Fonte digital para os valores */
+            font-family: monospace; 
         }
 
-        .button-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-left: 20px;
+        /* Estilos do Botão Único (Gate/Time) - UNIFORMIZAÇÃO */
+        #gateButton {
+            padding: 15px 30px;
+            font-size: 1.5em;
+            border: 4px solid var(--cor-principal);
+            border-radius: 2px; 
+            background-color: var(--fundo-claro); 
+            color: var(--cor-principal); 
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+            margin-bottom: 10px;
+            touch-action: manipulation; 
+            
+            /* 3. APLICAÇÃO DA FONTE COM NEGRITO E MAIÚSCULAS */
+            font-family: var(--fonte-hardware);
+            font-weight: 700; /* Negrito */
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
-        /* Estilos dos Botões de Ação */
-        .action-button {
-            width: 80px;
-            height: 35px;
-            margin: 5px 0;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.1s;
+        #gateButton:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            color: #aaa;
+            border-color: #555;
         }
 
-        #saveButton {
-            background-color: #007bff;
-            color: white;
-        }
-
-        #saveButton:hover {
-            background-color: #0056b3;
-        }
-
-        #fileInput {
+        .key-hints {
+            font-size: 1em;
+            color: #ccc; 
             margin-top: 10px;
-            color: #00ff99;
+            /* Aplica a fonte aos hints de teclado */
+            font-family: var(--fonte-hardware);
+            font-weight: 700;
         }
         
-        /* Estilos do LED */
-        .led-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-left: 20px;
-        }
-
-        .led {
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            background-color: #550000;
-            border: 1px solid #777;
-            box-shadow: 0 0 5px #000 inset;
-            transition: background-color 0.1s;
-        }
-        
-        .led-on {
-            background-color: #ff0000;
-            box-shadow: 0 0 10px #ff0000;
-        }
-        
-        /* Estilos do Botão de Inversão */
-        .rev-button {
-            width: 80px;
-            height: 35px;
-            margin: 5px 0;
-            border: 2px solid #00ff99;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-            background-color: #222;
-            color: #00ff99;
-            transition: background-color 0.1s, color 0.1s, box-shadow 0.1s;
-        }
-        
-        .rev-button.active {
-            background-color: #00ff99;
-            color: #1c1c1c;
-            box-shadow: 0 0 8px #00ff99;
-        }
-
+        /* ... (Restante do CSS de Knobs e Waveform permanece o mesmo) ... */
+        /* ... */
+        .waveform-wrapper { position: relative; width: 100%; max-width: 600px; margin: 0 auto; margin-bottom: 0px; }
+        #waveformCanvas { background-color: #111; border: 1px solid #555; border-radius: 0; display: block; cursor: default; margin-top: 0; width: 100%; height: auto; }
+        .glass-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; background-color: rgba(255, 255, 255, 0.02); border: 0.5px solid rgba(255, 255, 255, 0.05); border-radius: 0; }
+        .button-row { display: flex; justify-content: center; gap: 20px; margin-top: 20px; margin-bottom: 20px; }
+        .controls-row { display: flex; justify-content: space-around; gap: 20px; margin-bottom: 30px; margin-top: 20px; }
+        .control-group { display: flex; flex-direction: column; align-items: center; width: var(--tamanho-knob); }
+        .knob-wrapper { position: relative; width: var(--tamanho-knob); height: var(--tamanho-knob); border-radius: 50%; background-color: var(--cor-knob-fundo); border: 3px solid var(--cor-knob-borda); box-shadow: inset 0 0 8px rgba(0, 0, 0, 1); cursor: grab; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; user-select: none; transition: border-color 0.1s; touch-action: none; }
+        .knob-wrapper::before { content: ''; position: absolute; top: 5px; width: 4px; height: calc(var(--tamanho-knob) / 4); background-color: var(--cor-knob-indicador); border-radius: 2px; transform-origin: center calc(var(--tamanho-knob) / 2 - 5px); transition: background-color 0.1s; }
+        #endKnobWrapper::before { background-color: var(--cor-principal); }
+        #startKnobWrapper::before { background-color: var(--cor-secundaria); }
+        #velSamplerKnobWrapper::before { background-color: var(--cor-sampler-knob); }
+        /* ... */
     </style>
 </head>
 <body>
 
-    <div class="sampler-panel">
-        <h2>WEBSAMPLER 1.0</h2>
-
-        <input type="file" id="fileInput" accept="audio/*">
+    <div class="sampler-container">
+        <h1>CUBIC WEB SAMPLER // Gabriel Barella de Freitas</h1>
         
-        <div class="controls">
-            <div class="knob-group">
-                <div class="knob-wrapper" id="sr-sampler-knob" data-value="1.0">
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="knob-label">SR.SAMPLER (1.0)</div>
-            </div>
-
-            <div class="knob-group">
-                <div class="knob-wrapper" id="vel-sampler-knob" data-value="1.0">
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="knob-label">VEL.SAMPLER (1.0)</div>
-            </div>
-
-            <div class="knob-group">
-                <div class="knob-wrapper" id="trim-start-knob" data-value="0.0">
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="knob-label">TRIM.S (0.00)</div>
-            </div>
-
-            <div class="knob-group">
-                <div class="knob-wrapper" id="trim-end-knob" data-value="1.0">
-                    <div class="knob-indicator"></div>
-                </div>
-                <div class="knob-label">TRIM.E (1.00)</div>
-            </div>
-
-            <div class="button-group">
-                <button class="rev-button" id="revButton">REV</button>
-                <button class="action-button" id="saveButton">SALVAR</button>
-            </div>
+        <input type="file" id="fileInput" accept="audio/*" hidden>
+        
+        <div class="waveform-wrapper">
+            <div id="timeDisplayOverlay" class="time-overlay">--:--:---</div>
+            <div class="glass-overlay"></div> 
+            <canvas id="waveformCanvas" width="600" height="400"></canvas>
         </div>
         
-        <p id="status-message">Aguardando arquivo...</p>
+        <div class="button-row">
+            <label for="fileInput" class="custom-file-upload">
+                LOAD </label>
+            <button id="saveButton" class="custom-file-upload" disabled>
+                SAVE </button> 
+        </div>
 
+        <div class="controls-row">
+            <div class="control-group">
+                <label for="startKnobWrapper">Start</label>
+                <div id="startKnobWrapper" class="knob-wrapper" data-min="0" data-max="1" data-value="0"></div>
+                <div id="startValue" class="value-display">0.00 s</div>
+            </div>
+
+            <div class="control-group">
+                <label for="velSamplerKnobWrapper">VEL.SAMPLER</label>
+                <div id="velSamplerKnobWrapper" class="knob-wrapper" data-min="0.1" data-max="2.0" data-value="1.0"></div>
+                <div id="velSamplerValue" class="value-display">1.00x (Normal)</div>
+            </div>
+            
+            <div class="control-group">
+                <label for="endKnobWrapper">End</label>
+                <div id="endKnobWrapper" class="knob-wrapper" data-min="0" data-max="1" data-value="1"></div>
+                <div id="endValue" class="value-display">0.00 s</div>
+            </div>
+        </div>
+
+        <button id="gateButton" disabled>GATE (HOLD TO PLAY)</button> 
+        <p class="key-hints">Keyboard Trigger: **SPACE**</p>
     </div>
 
     <script>
-        // Variáveis Globais
+        // --- O CÓDIGO JAVASCRIPT PERMANECE IGUAL (Não precisa de alteração de fonte) ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let audioBuffer = null;
-        let sourceNode = null;
-
-        // Elementos do DOM
         const fileInput = document.getElementById('fileInput');
-        const srSamplerKnobWrapper = document.getElementById('sr-sampler-knob');
-        const velSamplerKnobWrapper = document.getElementById('vel-sampler-knob');
-        const trimStartKnobWrapper = document.getElementById('trim-start-knob');
-        const trimEndKnobWrapper = document.getElementById('trim-end-knob');
-        const saveButton = document.getElementById('saveButton');
-        const revButton = document.getElementById('revButton');
-        const statusMessage = document.getElementById('status-message');
+        const gateButton = document.getElementById('gateButton'); 
+        const saveButton = document.getElementById('saveButton'); 
+        const canvas = document.getElementById('waveformCanvas');
+        const fileUploadLabel = document.querySelector('label[for="fileInput"]'); 
+        const timeDisplayOverlay = document.getElementById('timeDisplayOverlay'); 
+        const ctx = canvas.getContext('2d');
+        
+        const startKnobWrapper = document.getElementById('startKnobWrapper');
+        const endKnobWrapper = document.getElementById('endKnobWrapper');
+        const startValueDisplay = document.getElementById('startValue');
+        const endValueDisplay = document.getElementById('endValue');
+        
+        const velSamplerKnobWrapper = document.getElementById('velSamplerKnobWrapper');
+        const velSamplerValueDisplay = document.getElementById('velSamplerValue');
 
-        // Estado do Sampler
-        const samplerState = {
-            isReversed: false // Novo estado para o botão REV
-        };
 
-        // --- FUNÇÕES DE UTENSÍLIOS ---
+        let audioBuffer = null;
+        let duration = 0; 
+        let currentSource = null; 
+        let isPlaying = false; 
+        let startTimeAudioContext = 0; 
+        let startOffset = 0;           
+        let sampleDuration = 0;        
+        let animationFrameId = null;   
+        let amplitudeZoom = 2.0; 
 
-        /**
-         * Lida com a movimentação do knob (botão giratório).
-         * @param {HTMLElement} knobElement - O elemento HTML do knob.
-         * @param {number} minVal - Valor mínimo que o knob pode atingir.
-         * @param {number} maxVal - Valor máximo que o knob pode atingir.
-         * @param {number} initialVal - Valor inicial do knob.
-         * @param {number} sensitivity - Quão rapidamente o valor muda com o movimento do mouse.
-         * @param {function} callback - Função a ser chamada após a mudança de valor.
-         */
-        function makeKnobDraggable(knobElement, minVal, maxVal, initialVal, sensitivity, callback) {
+        function formatTime(seconds) {
+            const totalMilliseconds = seconds * 1000;
+            const minutes = Math.floor(totalMilliseconds / 60000);
+            const remainingSeconds = Math.floor((totalMilliseconds % 60000) / 1000);
+            const milliseconds = Math.floor(totalMilliseconds % 1000);
+            
+            const minStr = String(minutes).padStart(2, '0');
+            const secStr = String(remainingSeconds).padStart(2, '0');
+            const msStr = String(milliseconds).padStart(3, '0');
+            
+            return `${minStr}:${secStr}:${msStr}`;
+        }
+        
+        function stopAudio() {
+            if (!isPlaying) return; 
+            if (currentSource) {
+                try {
+                    currentSource.stop(0); 
+                } catch (e) {}
+                currentSource = null; 
+                cancelAnimationFrame(animationFrameId);
+                drawWaveform(0); 
+            }
+            isPlaying = false;
+            gateButton.dataset.playing = "false";
+            timeDisplayOverlay.textContent = formatTime(startOffset); 
+        }
+
+        function triggerAudio() {
+            if (!audioBuffer || isPlaying) return; 
+
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            
+            const startNormalized = parseFloat(startKnobWrapper.dataset.value);
+            const endNormalized = parseFloat(endKnobWrapper.dataset.value);
+            const playbackRate = parseFloat(velSamplerKnobWrapper.dataset.value); 
+
+            startOffset = startNormalized * duration;
+            const endTime = endNormalized * duration;
+            sampleDuration = endTime - startOffset;
+
+            if (sampleDuration <= 0) {
+                console.warn("Duração do sample inválida.");
+                return;
+            }
+
+            const source = audioCtx.createBufferSource();
+            source.buffer = audioBuffer;
+            
+            source.playbackRate.value = playbackRate; 
+            
+            source.connect(audioCtx.destination);
+            
+            currentSource = source; 
+            isPlaying = true;
+            gateButton.dataset.playing = "true";
+            timeDisplayOverlay.textContent = formatTime(startOffset); 
+
+            startTimeAudioContext = audioCtx.currentTime;
+            
+            source.start(0, startOffset, sampleDuration / playbackRate); 
+
+            drawWaveform(0); 
+            animatePlayhead();
+
+            source.onended = () => {
+                cancelAnimationFrame(animationFrameId);
+                if (isPlaying) {
+                    stopAudio(); 
+                } else {
+                    drawWaveform(0);
+                }
+            };
+        }
+
+        function drawWaveform(playheadTime = -1) { 
+            if (!audioBuffer) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#666';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center'; 
+                ctx.fillText('Carregue um arquivo de áudio acima', canvas.width / 2, canvas.height / 2);
+                startValueDisplay.textContent = '0.00 s';
+                endValueDisplay.textContent = '0.00 s';
+                velSamplerValueDisplay.textContent = '1.00x (Normal)';
+                timeDisplayOverlay.textContent = '--:--:---'; 
+                return;
+            }
+
+            const data = audioBuffer.getChannelData(0); 
+            const step = Math.ceil(data.length / canvas.width);
+            
+            const amp = (canvas.height / 2); 
+            const zoomedAmp = amp * amplitudeZoom;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Desenha a forma de onda
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cor-waveform'); 
+            ctx.lineWidth = 3; 
+            ctx.beginPath();
+            for (let i = 0; i < canvas.width; i++) {
+                let min = 1.0;
+                let max = -1.0;
+                for (let j = 0; j < step; j++) {
+                    const datum = data[(i * step) + j];
+                    if (datum < min) min = datum;
+                    if (datum > max) max = datum;
+                }
+                
+                ctx.lineTo(i, amp + (min * zoomedAmp)); 
+                ctx.lineTo(i, amp + (max * zoomedAmp));
+            }
+            ctx.stroke();
+
+            // Posições dos Knobs (Início e Fim)
+            const startNormalized = parseFloat(startKnobWrapper.dataset.value);
+            const endNormalized = parseFloat(endKnobWrapper.dataset.value);
+            const startTime = startNormalized * duration;
+            const endTime = endNormalized * duration;
+            const playbackRate = parseFloat(velSamplerKnobWrapper.dataset.value);
+
+            const startX = startNormalized * canvas.width;
+            const endX = endNormalized * canvas.width;
+
+            // Linha de Início (Vermelho/Secundário)
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cor-secundaria');
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(startX, 0);
+            ctx.lineTo(startX, canvas.height);
+            ctx.stroke();
+
+            // Linha de Fim (Principal - Laranja)
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cor-principal');
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(endX, 0);
+            ctx.lineTo(endX, canvas.height);
+            ctx.stroke();
+
+            // Desenho da Linha de Reprodução (Playhead) 
+            if (playheadTime > 0) { 
+                const playheadTimeAdjusted = playheadTime * playbackRate;
+                const totalPlayedTime = startOffset + playheadTimeAdjusted; 
+                const playheadX = (totalPlayedTime / duration) * canvas.width;
+                const finalPlayheadX = Math.min(playheadX, endX); 
+
+                ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cor-playhead');
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(finalPlayheadX, 0);
+                ctx.lineTo(finalPlayheadX, canvas.height);
+                ctx.stroke();
+            }
+
+            // Atualiza o display de valor
+            startValueDisplay.textContent = `${startTime.toFixed(2)} s`;
+            endValueDisplay.textContent = `${endTime.toFixed(2)} s`;
+            velSamplerValueDisplay.textContent = `${playbackRate.toFixed(2)}x (${playbackRate === 1.0 ? 'Normal' : playbackRate > 1.0 ? 'Rápido' : 'Lento'})`;
+
+        }
+
+        function animatePlayhead() {
+            if (currentSource && isPlaying) {
+                const elapsedTime = audioCtx.currentTime - startTimeAudioContext;
+                const playbackRate = parseFloat(velSamplerKnobWrapper.dataset.value);
+                const totalPlayedTime = startOffset + (elapsedTime * playbackRate); 
+                timeDisplayOverlay.textContent = formatTime(totalPlayedTime);
+                drawWaveform(elapsedTime); 
+                animationFrameId = requestAnimationFrame(animatePlayhead);
+            }
+        }
+        
+        function updateKnob(knobElement, newValue) {
+            const min = parseFloat(knobElement.dataset.min);
+            const max = parseFloat(knobElement.dataset.max);
+            newValue = Math.max(min, Math.min(max, newValue));
+            knobElement.dataset.value = newValue; 
+            
+            if (knobElement === startKnobWrapper || knobElement === endKnobWrapper) {
+                const normalizedValue = (newValue - min) / (max - min);
+                const angle = -135 + normalizedValue * 270;
+                knobElement.style.transform = `rotate(${angle}deg)`;
+            } 
+            else if (knobElement === velSamplerKnobWrapper) {
+                const velMin = 0.1;
+                const velMax = 2.0;
+                const normalizedValue = (newValue - velMin) / (velMax - velMin); 
+                const angle = -135 + normalizedValue * 270;
+                knobElement.style.transform = `rotate(${angle}deg)`;
+            }
+
+            drawWaveform(isPlaying ? (audioCtx.currentTime - startTimeAudioContext) : 0); 
+            
+            if (!isPlaying && audioBuffer) {
+                 const startNormalized = parseFloat(startKnobWrapper.dataset.value);
+                 const duration = audioBuffer.duration;
+                 const newStartOffset = startNormalized * duration;
+                 timeDisplayOverlay.textContent = formatTime(newStartOffset);
+            }
+        }
+        
+        function setupKnobInteraction(knobElement, isStartKnob = false) {
             let isDragging = false;
-            let startY = 0;
-            let initialValue = initialVal;
-
-            // Define o valor inicial no dataset e atualiza a rotação visual
-            knobElement.dataset.value = initialVal;
-            updateKnobVisual(knobElement, initialVal, minVal, maxVal);
-
+            let startY = 0; 
+            
             knobElement.addEventListener('mousedown', (e) => {
                 isDragging = true;
-                startY = e.clientY;
-                initialValue = parseFloat(knobElement.dataset.value);
-                knobElement.style.cursor = 'ns-resize';
+                startY = e.clientY; 
+                knobElement.style.cursor = 'grabbing';
+                e.preventDefault(); 
             });
 
             document.addEventListener('mousemove', (e) => {
                 if (!isDragging) return;
 
-                const deltaY = startY - e.clientY;
-                let newValue = initialValue + deltaY * sensitivity;
+                const deltaY = startY - e.clientY; 
+                
+                const sensitivity = (knobElement === velSamplerKnobWrapper) ? 0.01 : 0.005; 
+                
+                let currentValue = parseFloat(knobElement.dataset.value);
+                let newValue = currentValue + (deltaY * sensitivity);
+                const min = parseFloat(knobElement.dataset.min);
+                const max = parseFloat(knobElement.dataset.max);
+                newValue = Math.max(min, Math.min(max, newValue));
 
-                // Clamp (limitador) do valor
-                newValue = Math.max(minVal, Math.min(maxVal, newValue));
-
-                knobElement.dataset.value = newValue;
-                updateKnobVisual(knobElement, newValue, minVal, maxVal);
-
-                if (callback) {
-                    callback(newValue);
+                if (isStartKnob) {
+                    const otherValue = parseFloat(endKnobWrapper.dataset.value);
+                    if (newValue >= otherValue) {
+                        newValue = otherValue - 0.001; 
+                    }
+                } else if (knobElement === endKnobWrapper) {
+                    const otherValue = parseFloat(startKnobWrapper.dataset.value);
+                    if (newValue <= otherValue) {
+                        newValue = otherValue + 0.001; 
+                    }
                 }
+
+                updateKnob(knobElement, newValue);
+                startY = e.clientY; 
             });
 
             document.addEventListener('mouseup', () => {
                 if (isDragging) {
                     isDragging = false;
-                    knobElement.style.cursor = 'pointer';
+                    knobElement.style.cursor = 'grab';
                 }
             });
         }
-
-        /**
-         * Atualiza a rotação visual do knob com base no seu valor.
-         */
-        function updateKnobVisual(knobElement, value, min, max) {
-            // Normaliza o valor para uma faixa de 0 a 1
-            const normalized = (value - min) / (max - min);
-            
-            // Mapeia para uma rotação em graus (ex: -135deg para min, +135deg para max)
-            const rotation = normalized * 270 - 135; 
-            
-            knobElement.querySelector('.knob-indicator').style.transform = 
-                `translate(-50%, -50%) rotate(${rotation}deg)`;
-            
-            // Atualiza o rótulo
-            const labelElement = knobElement.nextElementSibling;
-            if (labelElement) {
-                const labelText = labelElement.textContent.split(' ')[0];
-                labelElement.textContent = `${labelText} (${value.toFixed(knobElement.id.includes('trim') ? 2 : 1)})`;
-            }
-        }
-
-        // --- INICIALIZAÇÃO DOS KNOBS ---
-
-        // Knob SR.SAMPLER (Downsampling: 0.1 a 1.0)
-        makeKnobDraggable(srSamplerKnobWrapper, 0.1, 1.0, 1.0, 0.005, (val) => {
-            // A taxa de reprodução não é alterada em tempo real com o downsampling
-        });
-
-        // Knob VEL.SAMPLER (Velocidade/Pitch: 0.25 a 4.0)
-        makeKnobDraggable(velSamplerKnobWrapper, 0.25, 4.0, 1.0, 0.02, (val) => {
-            if (sourceNode) {
-                sourceNode.playbackRate.value = val;
-            }
-        });
-
-        // Knob TRIM.S (Trim Start: 0.0 a 1.0)
-        makeKnobDraggable(trimStartKnobWrapper, 0.0, 1.0, 0.0, 0.005, (val) => {
-            // Nenhuma ação em tempo real, afeta apenas o salvamento
-        });
-
-        // Knob TRIM.E (Trim End: 0.0 a 1.0)
-        makeKnobDraggable(trimEndKnobWrapper, 0.0, 1.0, 1.0, 0.005, (val) => {
-            // Nenhuma ação em tempo real, afeta apenas o salvamento
-        });
-
-
-        // --- FUNÇÕES DE EVENTOS ---
-
-        // Evento de seleção de arquivo
-        fileInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            statusMessage.textContent = 'Carregando e decodificando áudio...';
-            
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                statusMessage.textContent = `Arquivo carregado! (${(audioBuffer.duration).toFixed(2)}s)`;
-                
-                // Toca o sample logo após o carregamento (versão original, sem efeitos)
-                playSample(1.0); 
-
-            } catch (error) {
-                console.error("Erro ao carregar ou decodificar áudio:", error);
-                statusMessage.textContent = 'Erro ao carregar o áudio.';
-            }
-        });
-
-        // Evento do botão REV
-        revButton.addEventListener('click', () => {
-            samplerState.isReversed = !samplerState.isReversed;
-            revButton.classList.toggle('active', samplerState.isReversed);
-            
-            statusMessage.textContent = `Inversão: ${samplerState.isReversed ? 'Ativa' : 'Desativa'}. Salve para aplicar.`;
-        });
         
-        // Evento do botão SALVAR
-        saveButton.addEventListener('click', saveSample);
+        function resizeCanvas() {
+            const wrapper = document.querySelector('.waveform-wrapper');
+            const ratio = 400 / 600; 
+            canvas.width = wrapper.clientWidth;
+            canvas.height = wrapper.clientWidth * ratio;
+            drawWaveform(isPlaying ? (audioCtx.currentTime - startTimeAudioContext) : 0);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 0); 
 
-        // --- FUNÇÕES DE PROCESSAMENTO DE ÁUDIO ---
-
-        /**
-         * Toca o sample no Audio Context atual, aplicando apenas a velocidade.
-         * @param {number} rate - O playbackRate a ser aplicado (do VEL.SAMPLER).
-         */
-        function playSample(rate) {
-            if (!audioBuffer) return;
-
-            // Se houver uma reprodução anterior, pare-a
-            if (sourceNode) {
-                sourceNode.stop();
-                sourceNode.disconnect();
-            }
-
-            sourceNode = audioCtx.createBufferSource();
-            sourceNode.buffer = audioBuffer;
-            sourceNode.playbackRate.value = rate; 
-            sourceNode.connect(audioCtx.destination);
-            
-            // O Web Audio API não suporta inversão (reverse) simples de forma nativa
-            // no AudioBufferSourceNode. O botão REV afeta apenas o áudio salvo.
-            
-            sourceNode.start(0);
+        function createMouseEvent(touchEvent, mouseEventType) {
+            const touch = touchEvent.changedTouches[0];
+            const mouseEvent = new MouseEvent(mouseEventType, {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                screenX: touch.screenX,
+                screenY: touch.screenY,
+                button: 0 
+            });
+            touch.target.dispatchEvent(mouseEvent);
         }
 
-
-        /**
-         * Salva o sample como arquivo WAV, aplicando:
-         * 1. Trim (Start/End)
-         * 2. Reverse (Inversão) - NOVO!
-         * 3. Velocity/Pitch Shift (Simulação)
-         * 4. Downsampling (Redução da taxa de amostragem)
-         */
-        function saveSample() {
-            if (!audioBuffer) {
-                statusMessage.textContent = 'Nenhum áudio carregado para salvar.';
-                return;
-            }
-
-            statusMessage.textContent = 'Processando e Salvando...';
-
-            // 1. OBTENÇÃO DOS PARÂMETROS
-            const vel = parseFloat(velSamplerKnobWrapper.dataset.value);
-            const sr = parseFloat(srSamplerKnobWrapper.dataset.value);
-            const trimStart = parseFloat(trimStartKnobWrapper.dataset.value);
-            const trimEnd = parseFloat(trimEndKnobWrapper.dataset.value);
-            const isReversed = samplerState.isReversed; // Estado do botão REV
-
-            const rateOriginal = audioBuffer.sampleRate;
-            const numberOfChannels = audioBuffer.numberOfChannels;
-
-            // 2. APLICAÇÃO DO TRIM (CORTE)
-            const durationOriginal = audioBuffer.duration;
-            const startFrame = Math.floor(trimStart * audioBuffer.length);
-            const endFrame = Math.floor(trimEnd * audioBuffer.length);
-            const frameCountClipped = endFrame - startFrame;
-
-            if (frameCountClipped <= 0) {
-                statusMessage.textContent = 'Erro: Trim End não pode ser menor ou igual a Trim Start.';
-                return;
-            }
-
-            const clippedBuffer = audioCtx.createBuffer(
-                numberOfChannels,
-                frameCountClipped,
-                rateOriginal
-            );
-
-            // Copia os dados do buffer original para o buffer recortado
-            for (let channel = 0; channel < numberOfChannels; channel++) {
-                const originalData = audioBuffer.getChannelData(channel);
-                const clippedData = clippedBuffer.getChannelData(channel);
-                
-                for (let i = 0; i < frameCountClipped; i++) {
-                    clippedData[i] = originalData[startFrame + i];
+        function setupTouchToMouseMap() {
+            document.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    if (e.target === gateButton || e.target.closest('.knob-wrapper') || e.target === fileUploadLabel) {
+                        e.preventDefault();
+                    }
+                    createMouseEvent(e, 'mousedown');
                 }
-            }
-            
-            // 3. APLICAÇÃO DA INVERSÃO (REVERSE)
-            let pitchAdjustedBuffer = clippedBuffer;
+            }, { passive: false }); 
 
-            if (isReversed) {
-                // Inversão é feita no buffer 'clippedBuffer' (que já tem o trim aplicado)
-                const reversedBuffer = audioCtx.createBuffer(
-                    numberOfChannels,
-                    frameCountClipped,
-                    rateOriginal
-                );
-                
-                for (let channel = 0; channel < numberOfChannels; channel++) {
-                    const clippedData = clippedBuffer.getChannelData(channel);
-                    const reversedData = reversedBuffer.getChannelData(channel);
-
-                    // Reverte os dados do array
-                    // Nota: O método .slice() é crucial para criar uma cópia e não modificar o original,
-                    // mas o .getChannelData() retorna uma visualização (view) dos dados, então
-                    // precisamos copiar e depois reverter a cópia.
-                    
-                    const tempArray = Array.from(clippedData); // Copia para um array normal
-                    tempArray.reverse(); // Reverte o array
-                    reversedData.set(tempArray); // Copia os dados invertidos para o novo buffer
+            document.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1) {
+                    if (e.target.closest('.knob-wrapper')) {
+                        e.preventDefault(); 
+                    }
+                    createMouseEvent(e, 'mousemove');
                 }
-                
-                pitchAdjustedBuffer = reversedBuffer;
-            }
+            }, { passive: false });
 
-            // 4. APLICAÇÃO DA VELOCIDADE (PITCH SHIFT)
-            
-            const frameCountOriginal = pitchAdjustedBuffer.length;
-            const finalFrameCount = Math.round(frameCountOriginal / vel);
-            
-            const velAdjustedBuffer = audioCtx.createBuffer(
-                numberOfChannels,
-                finalFrameCount,
-                rateOriginal
-            );
-            
-            for (let channel = 0; channel < numberOfChannels; channel++) {
-                const originalData = pitchAdjustedBuffer.getChannelData(channel);
-                const newData = velAdjustedBuffer.getChannelData(channel);
-                
-                for (let i = 0; i < finalFrameCount; i++) {
-                    const indexInOriginal = i * vel; 
-                    const index1 = Math.floor(indexInOriginal);
-                    const fractionalPart = indexInOriginal - index1;
-                    const index2 = Math.min(index1 + 1, frameCountOriginal - 1);
-
-                    // Interpolação linear simples para suavização
-                    const sample1 = originalData[index1];
-                    const sample2 = originalData[index2];
-                    newData[i] = sample1 + (sample2 - sample1) * fractionalPart;
+            document.addEventListener('touchend', (e) => {
+                if (e.changedTouches.length === 1) {
+                    createMouseEvent(e, 'mouseup');
                 }
-            }
-
-
-            // 5. APLICAÇÃO DO DOWNSAMPLING (Redução da Taxa de Amostragem)
+            });
             
-            const newRate = rateOriginal * sr;
-            const newFrameCount = Math.round(velAdjustedBuffer.length * sr);
-            
-            const downsampledBuffer = audioCtx.createBuffer(
-                numberOfChannels,
-                newFrameCount,
-                newRate
-            );
-            
-            const ratio = 1 / sr; // Razão de amostragem
-            
-            for (let channel = 0; channel < numberOfChannels; channel++) {
-                const originalData = velAdjustedBuffer.getChannelData(channel);
-                const downsampledData = downsampledBuffer.getChannelData(channel);
-
-                for (let i = 0; i < newFrameCount; i++) {
-                    const indexInOriginal = i * ratio;
-                    const index1 = Math.floor(indexInOriginal);
-                    const fractionalPart = indexInOriginal - index1;
-                    const index2 = Math.min(index1 + 1, velAdjustedBuffer.length - 1);
-
-                    // Interpolação para evitar aliasing (ruído na conversão)
-                    const sample1 = originalData[index1];
-                    const sample2 = originalData[index2];
-                    downsampledData[i] = sample1 + (sample2 - sample1) * fractionalPart;
+             document.addEventListener('touchcancel', (e) => {
+                if (e.changedTouches.length === 1) {
+                    createMouseEvent(e, 'mouseup');
                 }
-            }
-
-
-            // 6. EXPORTAÇÃO (Criação do WAV)
-            
-            const wavData = encodeWAV(downsampledBuffer);
-            const blob = new Blob([wavData], { type: 'audio/wav' });
-            
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `sample_s${sr.toFixed(1)}_v${vel.toFixed(1)}${isReversed ? '_rev' : ''}.wav`;
-            document.body.appendChild(a);
-            a.click();
-            
-            statusMessage.textContent = 'Arquivo salvo com sucesso!';
-            
-            // Limpeza
-            setTimeout(() => {
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }, 100);
+            });
         }
-
-        /**
-         * FUNÇÃO DE ENCODE WAV (Não alterada, responsável por criar o arquivo binário)
-         */
-        function encodeWAV(audioBuffer) {
-            const numberOfChannels = audioBuffer.numberOfChannels;
-            const sampleRate = audioBuffer.sampleRate;
-            const length = audioBuffer.length;
-            const bytesPerSample = 2; // 16-bit PCM
-
-            const buffer = new ArrayBuffer(44 + length * numberOfChannels * bytesPerSample);
-            const view = new DataView(buffer);
-            const channels = [];
-            for (let i = 0; i < numberOfChannels; i++) {
-                channels.push(audioBuffer.getChannelData(i));
-            }
-
-            // RIFF chunk descriptor
-            writeString(view, 0, 'RIFF');
-            view.setUint32(4, 36 + length * numberOfChannels * bytesPerSample, true);
-            writeString(view, 8, 'WAVE');
+        
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
             
-            // FMT sub-chunk
-            writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true); // Sub-chunk size
-            view.setUint16(20, 1, true); // Audio format (1 = PCM)
-            view.setUint16(22, numberOfChannels, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * numberOfChannels * bytesPerSample, true); // Byte rate
-            view.setUint16(32, numberOfChannels * bytesPerSample, true); // Block align
-            view.setUint16(34, bytesPerSample * 8, true); // Bits per sample
+            fileUploadLabel.classList.remove('loaded');
+            fileUploadLabel.textContent = 'LOADING...';
+            gateButton.disabled = true;
+            saveButton.disabled = true; 
+            timeDisplayOverlay.textContent = '00:00:000';
 
-            // DATA sub-chunk
-            writeString(view, 36, 'data');
-            view.setUint32(40, length * numberOfChannels * bytesPerSample, true);
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const arrayBuffer = e.target.result;
 
-            // Write the PCM samples
-            let offset = 44;
-            for (let i = 0; i < length; i++) {
-                for (let channel = 0; channel < numberOfChannels; channel++) {
-                    let sample = channels[channel][i];
-                    // Converte float [-1, 1] para int16 [-32768, 32767]
-                    const int16Sample = Math.max(-1, Math.min(1, sample)) * 0x7FFF;
-                    view.setInt16(offset, int16Sample, true);
-                    offset += bytesPerSample;
-                }
-            }
+                audioCtx.decodeAudioData(arrayBuffer)
+                    .then(decodedBuffer => {
+                        audioBuffer = decodedBuffer;
+                        duration = audioBuffer.duration;
+                        
+                        updateKnob(startKnobWrapper, 0);
+                        updateKnob(endKnobWrapper, 1);  
+                        updateKnob(velSamplerKnobWrapper, 1.0);
 
-            return buffer;
-        }
+                        drawWaveform(-1); 
+                        gateButton.disabled = false;
+                        saveButton.disabled = false; 
+                        
+                        fileUploadLabel.textContent = 'LOAD';
+                        fileUploadLabel.classList.add('loaded'); 
+                    })
+                    .catch(e => {
+                        console.error("Erro ao decodificar o áudio:", e);
+                        alert("Erro ao decodificar o áudio. Tente outro formato (ex: .mp3 ou .wav).");
+                        fileUploadLabel.textContent = 'LOAD';
+                        timeDisplayOverlay.textContent = '--:--:---';
+                    });
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
 
         function writeString(view, offset, string) {
             for (let i = 0; i < string.length; i++) {
@@ -587,7 +626,141 @@
             }
         }
 
+        function saveSample() {
+            if (!audioBuffer) {
+                alert("Carregue um arquivo de áudio primeiro.");
+                return;
+            }
+            
+            const startNormalized = parseFloat(startKnobWrapper.dataset.value);
+            const endNormalized = parseFloat(endKnobWrapper.dataset.value);
+
+            const startOffset = startNormalized * duration;
+            const endTime = endNormalized * duration;
+            const sampleDuration = endTime - startOffset;
+
+            if (sampleDuration <= 0) {
+                alert("Duração do sample inválida. Ajuste os pontos de Início e Fim.");
+                return;
+            }
+
+            const sampleRate = audioBuffer.sampleRate;
+            const numberOfChannels = audioBuffer.numberOfChannels;
+            const frameCount = Math.ceil(sampleDuration * sampleRate);
+
+            const newBuffer = audioCtx.createBuffer(
+                numberOfChannels,
+                frameCount,
+                sampleRate
+            );
+            
+            const startFrame = Math.floor(startOffset * sampleRate);
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+                const originalData = audioBuffer.getChannelData(channel);
+                const newData = newBuffer.getChannelData(channel);
+                newData.set(originalData.subarray(startFrame, startFrame + frameCount));
+            }
+
+            let buffer = newBuffer;
+            let numChannels = buffer.numberOfChannels;
+            let bufferLength = buffer.length * numChannels * 2; 
+            let output;
+
+            output = new DataView(new ArrayBuffer(44 + bufferLength));
+            
+            const sampleRateWAV = buffer.sampleRate;
+            const bitsPerSample = 16;
+            const blockAlign = numChannels * (bitsPerSample / 8);
+            const byteRate = sampleRateWAV * blockAlign;
+
+            // 1. Chunk RIFF
+            writeString(output, 0, 'RIFF'); 
+            output.setUint32(4, 36 + bufferLength, true); 
+            writeString(output, 8, 'WAVE'); 
+
+            // 2. Chunk fmt
+            writeString(output, 12, 'fmt '); 
+            output.setUint32(16, 16, true); 
+            output.setUint16(20, 1, true); 
+            output.setUint16(22, numChannels, true); 
+            output.setUint32(24, sampleRateWAV, true); 
+            output.setUint32(28, byteRate, true); 
+            output.setUint16(32, blockAlign, true); 
+            output.setUint16(34, bitsPerSample, true); 
+
+            // 3. Chunk data
+            writeString(output, 36, 'data'); 
+            output.setUint32(40, bufferLength, true); 
+
+            let offset = 44;
+            for (let i = 0; i < buffer.length; i++) {
+                for (let channel = 0; channel < numChannels; channel++) {
+                    let sample = buffer.getChannelData(channel)[i];
+                    const int16Sample = Math.max(-1, Math.min(1, sample)) * 0x7FFF;
+                    output.setInt16(offset, int16Sample, true);
+                    offset += 2; 
+                }
+            }
+
+            const blob = new Blob([output], { type: 'audio/wav' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `sample_cortado_${new Date().getTime()}.wav`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            saveButton.classList.add('loaded'); 
+            saveButton.textContent = 'SAVED!';
+            setTimeout(() => {
+                saveButton.classList.remove('loaded');
+                saveButton.textContent = 'SAVE';
+            }, 1500);
+        }
+
+        let spacePressed = false;
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === ' ' && !gateButton.disabled && !spacePressed) {
+                event.preventDefault(); 
+                spacePressed = true;
+                triggerAudio();
+            }
+        });
+        
+        document.addEventListener('keyup', (event) => {
+            if (event.key === ' ' && spacePressed) {
+                event.preventDefault();
+                spacePressed = false;
+                stopAudio();
+            }
+        });
+        
+        gateButton.addEventListener('mousedown', (event) => {
+            if (!gateButton.disabled && event.button === 0) { 
+                triggerAudio();
+            }
+        });
+        
+        gateButton.addEventListener('mouseup', () => {
+            if (!gateButton.disabled) {
+                stopAudio();
+            }
+        });
+        
+        saveButton.addEventListener('click', saveSample);
+
+        setupKnobInteraction(startKnobWrapper, true);
+        setupKnobInteraction(endKnobWrapper, false);
+        setupKnobInteraction(velSamplerKnobWrapper,);
+        
+        updateKnob(velSamplerKnobWrapper, 1.0);
+
+        setupTouchToMouseMap();
+
+        drawWaveform(-1); 
     </script>
-//O salvamento não inclui a opção de save para Vel.Sampler
 </body>
 </html>
